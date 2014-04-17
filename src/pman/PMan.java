@@ -1,6 +1,7 @@
 
 package pman;
 
+import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.Toolkit;
 import javax.swing.JFrame;
@@ -8,10 +9,13 @@ import javax.swing.JFrame;
 public class PMan extends JFrame {
 
     public PMan() {
-        add(new Grid());
+        setTitle("JPacman");
+        add(new Grid(), BorderLayout.CENTER);
+        add(new InfoPanel(), BorderLayout.SOUTH);
         setLocation(
                 Toolkit.getDefaultToolkit().getScreenSize().width / 3, 
-                Toolkit.getDefaultToolkit().getScreenSize().height / 10);
+                Toolkit.getDefaultToolkit().getScreenSize().height / 10
+        );
         
         setDefaultCloseOperation(EXIT_ON_CLOSE);
        // setResizable(false);

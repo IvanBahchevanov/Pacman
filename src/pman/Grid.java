@@ -14,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.Timer;
@@ -25,9 +26,8 @@ public class Grid extends JPanel implements ActionListener {
     private int pacY;
     private short[] dotsX;
     private short[] dotsY;
-    private int[] borderLine;
-    private int width;
-    private int height;
+    private short[][] dots;
+    protected static short score;
     private Dimension d;
     private Image pacman;
     private Image ghost;
@@ -36,6 +36,8 @@ public class Grid extends JPanel implements ActionListener {
     protected static boolean up;
     protected static boolean down;
     private Timer timer;
+    protected static JLabel scoreLabel;
+    
     
     public Grid() {
         addKeyListener(new TAdapter());
@@ -44,11 +46,14 @@ public class Grid extends JPanel implements ActionListener {
         setBackground(Color.BLACK);        
         d = new Dimension(400, 400);
         setPreferredSize(d);
-        dotsX = new short[d.width / STEP_SIZE];
+        dotsX = new short[d.width / STEP_SIZE];        
         dotsY = new short[d.height / STEP_SIZE];
+        dots = new short[d.width / STEP_SIZE][d.height / STEP_SIZE];
         pacX = (STEP_SIZE /2 )* 3;
         pacY = (STEP_SIZE / 2 ) * 3 ;
         timer = new Timer(150, this);
+        score = 0;
+        scoreLabel = new JLabel("Score: " + Grid.score);
         
         generateDots();
         loadImages();
@@ -77,9 +82,12 @@ public class Grid extends JPanel implements ActionListener {
     }
     
     public void drawDots(Graphics2D gd) {
+        
       for (int i = 1; i < d.width / STEP_SIZE; i++) {
             for (int j = 1; j < d.height / STEP_SIZE; j++) {
-                gd.fillRect(dotsX[j]  , dotsY[i], 2, 2);
+                if ( dots[j][i] != -1 ) {
+                    gd.fillRect(dotsX[j]  , dotsY[i], 2, 2);
+                }
             }
         }
     }
@@ -91,11 +99,17 @@ public class Grid extends JPanel implements ActionListener {
         for  (short i = 1; i < d.height / STEP_SIZE; i++) {
             dotsY[i] = (short) (i * STEP_SIZE);
         }
+        
+        for (int i = 1; i < d.width / STEP_SIZE; i++) {
+            for (int j = 1; j < d.height / STEP_SIZE; j++) {
+                dots[i][j] = 0;
+            }
+        }
     }
     
     private void loadImages()  {
         try {
-            pacman = new ImageIcon(Grid.class.getResource("resources/pacman.png")).getImage();                    
+            pacman = new ImageIcon(Grid.class.getResource("resources/pacright.png")).getImage();                    
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Can't find pacman image...");
         }
@@ -108,10 +122,12 @@ public class Grid extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         movePacman();
+        checkPlumes();
         repaint();
     }
     
     public void movePacman() {
+        
         if (left && pacX > STEP_SIZE / 2) {
             pacX -= STEP_SIZE;
         }
@@ -128,7 +144,17 @@ public class Grid extends JPanel implements ActionListener {
             pacY += STEP_SIZE;
         }
     }
-      
+    
+    public void checkPlumes() {
+        int px =( pacX + STEP_SIZE / 2) / STEP_SIZE ;
+        int py = (pacY + STEP_SIZE / 2) / STEP_SIZE ;        
+        if (dots[px][py] != -1) {
+            dots[px][py] =  -1;
+            score++;
+            scoreLabel.setText("Score: " + score);
+        }
+        
+    }
 }
 
 class TAdapter extends KeyAdapter {
