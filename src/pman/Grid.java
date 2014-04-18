@@ -1,5 +1,3 @@
-
-
 package pman;
 
 import java.awt.BasicStroke;
@@ -21,26 +19,17 @@ import javax.swing.JPanel;
 import javax.swing.Timer;
 
 public class Grid extends JPanel implements ActionListener {
-   
-    private final short STEP_SIZE = 20;
-    private int pacX;
-    private int pacY;
-    private short ghost1X;
-    private short ghost1Y;
-    private short ghost2X;
-    private short ghost2Y;
-    private short ghost3X;
-    private short ghost3Y;
-    private short ghost4X;
-    private short ghost4Y;    
-    private short ghost5X;
-    private short ghost5Y;
-    private short ghost6X;
-    private short ghost6Y;
+    protected static JLabel scoreLabel;  
+    private final short STEP_SIZE = 20;    
+    protected static short score;
+    private short mouthPosition;
+    private byte ghostNumber;
+    private short pacX;
+    private short pacY;
     private short[] dotsX;
     private short[] dotsY;
     private short[][] dots;
-    protected static short score;
+    private short [] ghostX, ghostY;
     private Dimension d;
     private Image pacRightImage;
     private Image pacLeftImage;
@@ -50,64 +39,51 @@ public class Grid extends JPanel implements ActionListener {
     private Image pacLeftClosedImage;
     private Image pacUpClosedImage;
     private Image pacDownClosedImage;
-    private Image ghost1;
-    private Image ghost2;
-    private Image ghost3;
-    private Image ghost4;
-    private Image ghost5;
-    private Image ghost6;
-    protected static boolean pacLeft;
-    protected static boolean pacRight;
-    protected static boolean pacUp;
-    protected static boolean pacDown;
-    protected static boolean g1Left, g1Right, g1Up, g1Down ;
-    protected static boolean g2Left, g2Right, g2Up, g2Down ;
-    protected static boolean g3Left, g3Right, g3Up, g3Down ;
-    protected static boolean g4Left, g4Right, g4Up, g4Down ;;
+    private Image[] ghostImageArray;
+    protected static boolean pacLeft, pacRight, pacUp, pacDown;
+    private  boolean ghostUp, ghostRight, ghostDown, ghostLeft;
+    private boolean isDeath;
+        
     private Timer timer;
-    protected static JLabel scoreLabel;
-    private short mouth;
     Random rand;
     
     
     
+    
     public Grid() {
+        
         addKeyListener(new TAdapter());
         setFocusable(true);
         setDoubleBuffered(true);
         setBackground(Color.BLACK);        
         d = new Dimension(400, 400);
         setPreferredSize(d);
+        scoreLabel = new JLabel("Score: " + Grid.score);
+        initGame();
+        
+        timer = new Timer(180, this);
+        timer.start();
+    }
+    
+    private void initGame() {
+        
         dotsX = new short[d.width / STEP_SIZE];        
         dotsY = new short[d.height / STEP_SIZE];
         dots = new short[d.width / STEP_SIZE][d.height / STEP_SIZE];
-        pacX = (STEP_SIZE /2 )* 3;
-        pacY = (STEP_SIZE / 2 ) * 3 ;
-        ghost1X = (STEP_SIZE /2 )* 7;
-        ghost1Y = (STEP_SIZE /2 )* 7;
-        ghost2X = (STEP_SIZE /2 )* 7;
-        ghost2Y = (STEP_SIZE /2 )* 7;
-        ghost3X = (STEP_SIZE /2 )* 3;
-        ghost3Y = (STEP_SIZE /2 )* 3;
-        ghost4X = (STEP_SIZE /2 )* 4;
-        ghost4Y = (STEP_SIZE /2 )* 4;
-        ghost5X = (STEP_SIZE /2 )* 5;
-        ghost5Y = (STEP_SIZE /2 )* 5;
-        ghost6X = (STEP_SIZE /2 )* 6;
-        ghost6Y = (STEP_SIZE /2 )* 6;
-        timer = new Timer(180, this);
+        pacX = (STEP_SIZE /2 )* 21;
+        pacY = (STEP_SIZE / 2 ) * 21 ;
+        mouthPosition = 0;
         score = 0;
-        scoreLabel = new JLabel("Score: " + Grid.score);
-        mouth = 0;
-        rand = new Random();
-        
+        rand = new Random();  
+        ghostNumber = 6;
+        ghostImageArray = new Image[ghostNumber];
+        ghostX = new short[ghostNumber];
+        ghostY = new short[ghostNumber];
+        isDeath = false;
         generateDots();
         loadImages();
-        timer.start();
-        
-        
-       
     }
+        
     
     @Override
     public void paintComponent(Graphics g) {
@@ -116,7 +92,13 @@ public class Grid extends JPanel implements ActionListener {
         drawBorder(gd);        
         drawDots(gd);
         drawPacman(gd);
-        drawGhosts(gd);
+        drawGhosts(gd); 
+        
+        if (isDeath) {
+            gd.setColor(Color.red);
+            gd.drawString("YOU ARE DEATH !!!", 150, 200);
+            timer.stop();
+        }
                
         Toolkit.getDefaultToolkit().sync();    
         gd.dispose();
@@ -165,63 +147,65 @@ public class Grid extends JPanel implements ActionListener {
             pacLeftClosedImage = new ImageIcon(Grid.class.getResource("resources/closedleft.png")).getImage();
             pacUpClosedImage = new ImageIcon(Grid.class.getResource("resources/closedup.png")).getImage();
             pacDownClosedImage = new ImageIcon(Grid.class.getResource("resources/closeddown.png")).getImage();
-            ghost1 = new ImageIcon(Grid.class.getResource("resources/ghost1.png")).getImage();
-            ghost2 = new ImageIcon(Grid.class.getResource("resources/ghost2.png")).getImage();
-            ghost3 = new ImageIcon(Grid.class.getResource("resources/ghost3.png")).getImage();
-            ghost4 = new ImageIcon(Grid.class.getResource("resources/ghost4.png")).getImage();
-            ghost5 = new ImageIcon(Grid.class.getResource("resources/ghost5.png")).getImage();
-            ghost6 = new ImageIcon(Grid.class.getResource("resources/ghost6.png")).getImage();
+            
+            for (int i = 0; i < ghostImageArray.length; i++) {
+                ghostImageArray[i] = new ImageIcon(Grid.class.getResource("resources/ghost1.png")).getImage();
+                ghostX[i] = (STEP_SIZE /2 )* 7;
+                ghostY[i] = (STEP_SIZE /2 )* 7;
+            }
+            
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Can't find images...");
         }
     }
     
     public void drawPacman(Graphics2D gd) {
+        
         if (pacRight) {
-            if (mouth % 2 == 0) {
+            if (mouthPosition % 2 == 0) {
                 gd.drawImage(pacRightImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacRightClosedImage, pacX, pacY, this);
             }
-            mouth++;
+            mouthPosition++;
         }
         if (pacLeft) {
-            if (mouth % 2 == 0) {
+            if (mouthPosition % 2 == 0) {
                 gd.drawImage(pacLeftImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacLeftClosedImage, pacX, pacY, this);
             }
-            mouth++;
+            mouthPosition++;
         }
         if (pacDown) {
-            if (mouth % 2 == 0) {
+            if (mouthPosition % 2 == 0) {
                 gd.drawImage(pacDownImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacDownClosedImage, pacX, pacY, this);
             }
-            mouth++;
+            mouthPosition++;
         }
         if (pacUp) {
-            if (mouth % 2 == 0) {
+            if (mouthPosition % 2 == 0) {
                 gd.drawImage(pacUpImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacUpClosedImage, pacX, pacY, this);
             }
-            mouth++;
+            mouthPosition++;
         }
+        mouthPosition = mouthPosition % 2 == 0 ? (short) 0 :(short) 1;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        chooseGhostsDirection();
-        moveAllGhosts();
+        moveGhosts();
         movePacman();
-        checkPlumes();
-        
+        checkPlumes();  
+        checkDeath();
        
         repaint();
     }
@@ -257,179 +241,66 @@ public class Grid extends JPanel implements ActionListener {
     }
     
     public void drawGhosts(Graphics2D gd) {
-        gd.drawImage(ghost1, ghost1X, ghost1Y, this);
-        gd.drawImage(ghost2, ghost2X, ghost2Y, this);
-        gd.drawImage(ghost3, ghost3X, ghost3Y, this);
-        gd.drawImage(ghost4, ghost4X, ghost4Y, this);
-        gd.drawImage(ghost5, ghost5X, ghost5Y, this);
-        gd.drawImage(ghost6, ghost6X, ghost6Y, this);
+        
+        for (int i = 0; i < ghostImageArray.length; i++) {
+            gd.drawImage(ghostImageArray[i], ghostX[i], ghostY[i], this);
+        }
     }
     
-    public void chooseGhostsDirection() {
-        int direction1 = rand.nextInt(4);
-        int direction2 = rand.nextInt(4);
-        int direction3 = rand.nextInt(4);
-        int direction4 = rand.nextInt(4);
-        switch (direction1) {
-            case 0 : g1Up = true; 
-                     g1Down = false;
-                     g1Left = false;
-                     g1Right = false;
-                break;
+    public void moveGhosts() {
+        
+        for (int i = 0; i < ghostImageArray.length; i++) {
+            short dir = (short)rand.nextInt(4);            
+            switch (dir) {               
                 
-            case 1 : g1Up = false; 
-                     g1Down = false;
-                     g1Left = false;
-                     g1Right = true;                    
-                     
-                break;
+                case 0 : ghostUp = true; 
+                         ghostDown = false;
+                         ghostLeft = false;
+                         ghostRight = false;                         
+                   break;
                 
-            case 2 : g1Up = false; 
-                     g1Down = true;
-                     g1Left = false;
-                     g1Right = false;
-                     
-                     
-                break;
+                case 1 : ghostUp = false; 
+                         ghostDown = false;
+                         ghostLeft = false;
+                         ghostRight = true;  
+                    break;
                 
-            case 3 : g1Up = false; 
-                     g1Down = false;
-                     g1Left = true;
-                     g1Right = false;
-                     
-                     
-                break;
-       }
-       
-      
-     //   System.out.println(direction2);
-       switch ( direction2) {
-           case 0 :                      
-                     g2Up = false; 
-                     g2Down = false;
-                     g2Left = false;
-                     g2Right = true;
-                break;
+                case 2 : ghostUp = false; 
+                         ghostDown = true;
+                         ghostLeft = false;
+                         ghostRight = false;   
+                    break;
                 
-            case 1 : {                     
-                     g2Up = true; 
-                     g2Down = false;
-                     g2Left = false;
-                     g2Right = false; 
-                break;
+                case 3 : ghostUp = false; 
+                         ghostDown = false;
+                         ghostLeft = true;
+                         ghostRight = false;    
+                    break;
             }
-                
-            case 2 :                      
-                     g2Up = false; 
-                     g2Down = false;
-                     g2Left = true;
-                     g2Right = false;
-                break;
-                
-            case 3 :                      
-                     g2Up = false; 
-                     g2Down = true;
-                     g2Left = false;
-                     g2Right = false;
-                break;
+            if ( ghostLeft && ghostX[i] > STEP_SIZE ) {
+                ghostX[i] -= STEP_SIZE;
+            }
+            if ( ghostRight && ghostX[i] <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ) ) {
+                ghostX[i] += STEP_SIZE;
+            }
+            if ( ghostUp && ghostY[i] > STEP_SIZE / 2) {
+                ghostY[i] -= STEP_SIZE;
+            }
+        
+            if (ghostDown && ghostY[i] < ( d.height - (STEP_SIZE / 2 + STEP_SIZE))) {
+                ghostY[i] += STEP_SIZE;
+            }            
        }
-       
-       switch (direction3) {
-            case 0 :                      
-                     g3Up = false; 
-                     g3Down = true;
-                     g3Left = false;
-                     g3Right = false;
-                break;
-                
-            case 1 :                     
-                     g3Up = false; 
-                     g3Down = false;
-                     g3Left = false;
-                     g3Right = true;
-                break;
-                
-            case 2 :                      
-                     g3Up = true; 
-                     g3Down = false;
-                     g3Left = false;
-                     g3Right = false;
-                break;
-                
-            case 3 :                      
-                     g3Up = false; 
-                     g3Down = false;
-                     g3Left = true;
-                     g3Right = false;
-                break;
-       }
-           
-       
-    }
+    } 
     
-    public void moveAllGhosts() {
-        moveGhost1();
-        moveGhost2();
-        moveGhost3();
-    }
     
-    public void moveGhost1() {
-        
-        if ( g1Left && ghost1X > STEP_SIZE ) {
-            ghost1X -= STEP_SIZE;
-        }
-        
-        if ( g1Right && ghost1X <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ) ) {
-            ghost1X += STEP_SIZE;
-        }
-        
-        if ( g1Up && ghost1Y > STEP_SIZE / 2) {
-            ghost1Y -= STEP_SIZE;
-        }
-        
-        if (g1Down && ghost1Y < ( d.height - (STEP_SIZE / 2 + STEP_SIZE))) {
-            ghost1Y += STEP_SIZE;
+    public void checkDeath() {
+        for (int i = 0; i < ghostImageArray.length; i++) {
+            if (ghostX[i] == pacX && ghostY[i] == pacY) {
+                isDeath = true;
+            }
         }
     }
-    
-    public void moveGhost2() {
-        if ( g2Left && ghost2X > STEP_SIZE / 2) {
-            ghost2X -= STEP_SIZE;
-        }
-        
-        if ( g2Right && ghost2X <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ) ) {
-            ghost2X += STEP_SIZE;
-        }
-        
-        if ( g2Up && ghost2Y > STEP_SIZE / 2) {
-            ghost2Y -= STEP_SIZE;
-        }
-        
-        if (g2Down && ghost2Y < ( d.height - (STEP_SIZE / 2 + STEP_SIZE))) {  
-            ghost2Y += STEP_SIZE;
-        }
-    }
-    
-    public void moveGhost3() {
-        if ( g3Left && ghost3X > STEP_SIZE / 2) {
-            ghost3X -= STEP_SIZE;
-        }
-        
-        if ( g3Right && ghost3X <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ) ) {
-            ghost3X += STEP_SIZE;
-        }
-        
-        if ( g3Up && ghost3Y > STEP_SIZE / 2) {
-            ghost3Y -= STEP_SIZE;
-        }
-        
-        if (g3Down && ghost3Y < ( d.height - (STEP_SIZE / 2 + STEP_SIZE))) {  
-            ghost3Y += STEP_SIZE;
-        }
-    }
-    
-    
-    
     
 }
 
