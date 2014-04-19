@@ -20,9 +20,10 @@ import javax.swing.Timer;
 
 public class Grid extends JPanel implements ActionListener {
     protected static JLabel scoreLabel;  
-    private final short STEP_SIZE = 20;    
+    private final short STEP_SIZE = 20;
+    private int winPoints;
     protected static short score;
-    private short mouthPosition;
+    private short openMouth;
     private byte ghostNumber;
     private short pacX;
     private short pacY;
@@ -57,22 +58,26 @@ public class Grid extends JPanel implements ActionListener {
         setDoubleBuffered(true);
         setBackground(Color.BLACK);        
         d = new Dimension(400, 400);
+        winPoints = ((d.width - STEP_SIZE)*( d.height - STEP_SIZE)) / (STEP_SIZE * STEP_SIZE);        
         setPreferredSize(d);
-        scoreLabel = new JLabel("Score: " + Grid.score);
-        initGame();
-        
-        timer = new Timer(180, this);
+        scoreLabel = new JLabel("Score: " + Grid.score);  
+        timer = new Timer(220, this);
         timer.start();
     }
     
-    private void initGame() {
-        
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        initGame();
+    }
+    
+    public void initGame() {        
         dotsX = new short[d.width / STEP_SIZE];        
         dotsY = new short[d.height / STEP_SIZE];
         dots = new short[d.width / STEP_SIZE][d.height / STEP_SIZE];
         pacX = (STEP_SIZE /2 )* 21;
         pacY = (STEP_SIZE / 2 ) * 21 ;
-        mouthPosition = 0;
+        openMouth = 0;
         score = 0;
         rand = new Random();  
         ghostNumber = 6;
@@ -82,8 +87,10 @@ public class Grid extends JPanel implements ActionListener {
         isDeath = false;
         generateDots();
         loadImages();
-    }
-        
+        if ( ! timer.isRunning()) {
+            timer.start();
+        }
+    }        
     
     @Override
     public void paintComponent(Graphics g) {
@@ -92,14 +99,16 @@ public class Grid extends JPanel implements ActionListener {
         drawBorder(gd);        
         drawDots(gd);
         drawPacman(gd);
-        drawGhosts(gd); 
+        drawGhosts(gd);    
         
         if (isDeath) {
-            gd.setColor(Color.red);
-            gd.drawString("YOU ARE DEATH !!!", 150, 200);
-            timer.stop();
+            drawDeath(gd);
         }
-               
+        System.out.println( ); 
+        if (score == winPoints ){ 
+             drawWin(gd);  
+        }
+                       
         Toolkit.getDefaultToolkit().sync();    
         gd.dispose();
     }
@@ -109,6 +118,23 @@ public class Grid extends JPanel implements ActionListener {
         gd.setStroke(new BasicStroke(2));
         gd.drawRect(0, 0, d.width, d.height);     
         
+    }
+    
+    public void drawWin(Graphics2D gd) {
+        timer.stop();
+        pacLeft = pacRight = pacDown = pacUp = false;
+        gd.setColor(Color.red);
+        gd.drawString("WIN", 190, 200);
+        gd.drawString("Press 'S' to play again !", 140, 220); 
+
+    }        
+    
+    public void drawDeath(Graphics2D gd) {
+        timer.stop();
+        pacLeft = pacRight = pacDown = pacUp = false;
+        gd.setColor(Color.red);
+        gd.drawString("YOU ARE DEATH !!!", 140, 200);
+        gd.drawString("Press 'S' to play again !", 130, 220);
     }
     
     public void drawDots(Graphics2D gd) {
@@ -162,42 +188,42 @@ public class Grid extends JPanel implements ActionListener {
     public void drawPacman(Graphics2D gd) {
         
         if (pacRight) {
-            if (mouthPosition % 2 == 0) {
+            if (openMouth % 2 == 0) {
                 gd.drawImage(pacRightImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacRightClosedImage, pacX, pacY, this);
             }
-            mouthPosition++;
+            openMouth++;
         }
         if (pacLeft) {
-            if (mouthPosition % 2 == 0) {
+            if (openMouth % 2 == 0) {
                 gd.drawImage(pacLeftImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacLeftClosedImage, pacX, pacY, this);
             }
-            mouthPosition++;
+            openMouth++;
         }
         if (pacDown) {
-            if (mouthPosition % 2 == 0) {
+            if (openMouth % 2 == 0) {
                 gd.drawImage(pacDownImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacDownClosedImage, pacX, pacY, this);
             }
-            mouthPosition++;
+            openMouth++;
         }
         if (pacUp) {
-            if (mouthPosition % 2 == 0) {
+            if (openMouth % 2 == 0) {
                 gd.drawImage(pacUpImage, pacX, pacY, this);
             }
             else {
                 gd.drawImage(pacUpClosedImage, pacX, pacY, this);
             }
-            mouthPosition++;
+            openMouth++;
         }
-        mouthPosition = mouthPosition % 2 == 0 ? (short) 0 :(short) 1;
+        openMouth = openMouth % 2 == 0 ? (short) 0 :(short) 1;
     }
 
     @Override
@@ -243,6 +269,7 @@ public class Grid extends JPanel implements ActionListener {
     public void drawGhosts(Graphics2D gd) {
         
         for (int i = 0; i < ghostImageArray.length; i++) {
+            
             gd.drawImage(ghostImageArray[i], ghostX[i], ghostY[i], this);
         }
     }
@@ -250,46 +277,50 @@ public class Grid extends JPanel implements ActionListener {
     public void moveGhosts() {
         
         for (int i = 0; i < ghostImageArray.length; i++) {
-            short dir = (short)rand.nextInt(4);            
-            switch (dir) {               
+            short dir = (short)rand.nextInt(4); 
+            switch (dir) {
                 
-                case 0 : ghostUp = true; 
-                         ghostDown = false;
-                         ghostLeft = false;
-                         ghostRight = false;                         
-                   break;
+                case 0 :  
+                    ghostUp = true;
+                    ghostDown = false;
+                    ghostLeft = false;
+                    ghostRight = false;                
+                 break;
+                    
+                case 1 :  
+                    ghostUp = false;
+                    ghostDown = false;
+                    ghostLeft = false;
+                    ghostRight = true; 
+                 break;
                 
-                case 1 : ghostUp = false; 
-                         ghostDown = false;
-                         ghostLeft = false;
-                         ghostRight = true;  
-                    break;
+                case 2 :  
+                    ghostUp = false;
+                    ghostDown = true;
+                    ghostLeft = false;
+                    ghostRight = false;                          
+                 break;
                 
-                case 2 : ghostUp = false; 
-                         ghostDown = true;
-                         ghostLeft = false;
-                         ghostRight = false;   
-                    break;
-                
-                case 3 : ghostUp = false; 
-                         ghostDown = false;
-                         ghostLeft = true;
-                         ghostRight = false;    
-                    break;
+                case 3 :  
+                    ghostUp = false; 
+                    ghostDown = false;
+                    ghostLeft = true;
+                    ghostRight = false;                  
+                 break;
             }
-            if ( ghostLeft && ghostX[i] > STEP_SIZE ) {
-                ghostX[i] -= STEP_SIZE;
+            if ( ghostLeft && ghostX[i] > STEP_SIZE  ) {
+                ghostX[i] -= STEP_SIZE ;
             }
-            if ( ghostRight && ghostX[i] <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ) ) {
+            if ( ghostRight && (ghostX[i] <  ( d.width - ( STEP_SIZE / 2 + STEP_SIZE ) ))  ) {
                 ghostX[i] += STEP_SIZE;
             }
-            if ( ghostUp && ghostY[i] > STEP_SIZE / 2) {
-                ghostY[i] -= STEP_SIZE;
+            if ( ghostUp && ghostY[i] > STEP_SIZE / 2 ) {
+                ghostY[i] -= STEP_SIZE ;
             }
         
             if (ghostDown && ghostY[i] < ( d.height - (STEP_SIZE / 2 + STEP_SIZE))) {
-                ghostY[i] += STEP_SIZE;
-            }            
+                ghostY[i] += STEP_SIZE ;
+            }           
        }
     } 
     
@@ -301,11 +332,7 @@ public class Grid extends JPanel implements ActionListener {
             }
         }
     }
-    
-}
-
-
-class TAdapter extends KeyAdapter {
+    class TAdapter extends KeyAdapter {
     @Override
     public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_UP) {
@@ -334,6 +361,15 @@ class TAdapter extends KeyAdapter {
             Grid.pacDown = false;
             Grid.pacRight = true;
             Grid.pacLeft = false;
-        }     
+        }
+        
+        if (e.getKeyCode() == KeyEvent.VK_S) {
+            initGame();
+        }
     }
 }
+    
+}
+
+
+
