@@ -18,7 +18,7 @@ public class PMan extends JFrame {
         );
         
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-       // setResizable(false);
+       
         pack();
         
     }
