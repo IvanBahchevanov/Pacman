@@ -152,6 +152,7 @@ public class Grid extends JPanel implements ActionListener {
         pacUp = false;
         gd.setColor(Color.red);
         gd.drawString("YOU ARE DEAD !!!", 140, 200);
+        gd.drawString("Press 'S' to play again !", 130, 220);
         
     }
     /**
